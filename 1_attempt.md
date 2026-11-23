@@ -1,82 +1,43 @@
-{
- "cells": [
-  {
-   "cell_type": "markdown",
-   "id": "80a3d582-8f7f-4c9e-b6e4-c1f45735b42c",
-   "metadata": {},
-   "source": [
-    "# Initial Dataset Diagnosis — Reconstructed\n",
-    "\n",
-    "**Dataset:** teaching_prices_messy.csv\n",
-    "\n",
-    "**Purpose:** Identify data-quality problems before cleaning.\n",
-    "\n",
-    "## 1. Initial inspection\n",
-    "\n",
-    "The dataset contains 97 rows and 6 columns:\n",
-    "\n",
-    "- date\n",
-    "- item\n",
-    "- city\n",
-    "- price\n",
-    "- unit\n",
-    "- data_label\n",
-    "\n",
-    "The data contains several inconsistencies that could affect analysis.\n",
-    "\n",
-    "## 2. Problems identified\n",
-    "\n",
-    "**Missing price:** One observation has no price. I would flag and retain it because the correct value cannot be determined from the dataset.\n",
-    "\n",
-    "**Inconsistent price formatting:** The value 1,250 contains a comma. I would convert it into a numeric value but investigate whether the resulting price is plausible.\n",
-    "\n",
-    "**Extreme price:** The value 9999 for Sweetener D appears unusually high. I would flag it rather than automatically replace it.\n",
-    "\n",
-    "**Inconsistent capitalisation:** The labels Oil B and oil b appear to refer to the same item. I would standardise their capitalisation while preserving the original labels.\n",
-    "\n",
-    "**Duplicate observation:** An identical Staple A observation for City 1 on 8 January appears twice. I would remove one exact duplicate.\n",
-    "\n",
-    "**Data provenance:** The dataset identifies itself as illustrative data rather than actual PBS observations. This warning should be preserved.\n",
-    "\n",
-    "## 3. Expected dataset structure\n",
-    "\n",
-    "There are 12 dates, 4 items and 2 cities.\n",
-    "\n",
-    "12 × 4 × 2 = 96 expected date-item-city combinations.\n",
-    "\n",
-    "The original dataset contains 97 rows, so duplicate and conflicting observations need investigation.\n",
-    "\n",
-    "## 4. Planned cleaning principles\n",
-    "\n",
-    "1. Preserve the original dataset.\n",
-    "2. Work on a separate copy.\n",
-    "3. Standardise labels only when their meaning is clear.\n",
-    "4. Convert prices to numeric values.\n",
-    "5. Flag missing and suspicious values.\n",
-    "6. Remove only exact duplicates.\n",
-    "7. Verify all changes using counts and descriptive statistics.\n"
-   ]
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.14.6"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+Attempt-Before-AI: Data Audit & Diagnostic Log
+
+Before consulting any AI tools or writing cleaning scripts, I performed an independent diagnostic audit of the raw dataset (teaching_prices_messy.csv). I loaded the dataset using pandas and ran the following checks to understand its structure and data types:
+
+raw = pd.read_csv("teaching_prices_messy.csv")
+raw.shape
+raw.info()
+raw.isna().sum()
+raw.duplicated().sum()
+raw['item'].value_counts(dropna=False)
+raw[raw.duplicated(keep=False)]
+number = pd.to_numeric(raw["price"],errors="coerce")
+print("missing before", raw["price"].isna().sum())
+print("missing after", number.isna().sum())
+Diagnosed Problems & Anomalies
+
+Problem 1: Exact Duplicate Row
+
+raw.duplicated().sum() returned 1, Inspecting with # raw[raw.duplicated(keep=False)] showed that Row 96 is an exact duplicate of Row 8 (Staple A, City 1, 2026-01-08, price 99.5).
+Problem 2: Inconsistent Text Casing
+
+raw['item'].value_counts()
+revealed 24 entries for "Staple A", "Oil B", "Pulse C", "Sweetener D", but 1 entry labeled lowercase "oil b" at index 40.
+Problem 3: Missing Price Value
+
+raw.isna().sum() showed 1 missing value in the price column, specifically at index 5 (Pulse C, City 2, 2026-01-01).
+Problem 4: Malformed and Outlier Prices Converting prices to numeric revealed a string-formatted number with a comma ("1,250" at index 17) and an extreme, unrealistic outlier value (9999 at index 30 for Sweetener D).
+
+Problem 5: Incorrect Data Types The date column is stored as an object/string instead of a datetime datatype.
+
+Planned Decisions
+
+Issue Found: Exact Duplicate (Row 96) Planned Decision: Exclude / Drop Reason : Removing exact duplicate rows prevents double-counting observations in time-series aggregates.
+
+Issue Found: Lowercase Item Name ("oil b") Planned Decision: Correct / Standardize Reason : Standardizing text casing ensures proper categorical grouping and ensures item counts match expectations (24 per item).
+
+Issue Found: Missing Price (NaN at Index 5) Planned Decision: Investigate / Retain as NaN Reason : Do not artificially impute prices without source verification; keep as missing so downstream analysis handles it appropriately.
+
+Issue Found: String Price with Comma ("1,250") Planned Decision: Correct / Convert Reason / Justification: Strip the comma and cast to numeric float so mathematical and statistical functions can process it.
+
+Issue Found: Extreme Outlier Price (9999 at Index 30) Planned Decision: Flag & Exclude or Correct Reason / Justification: An extreme value of 9999 for sugar/sweetener is a data entry error; convert to NaN or flag for review.
+
+Issue Found: Date Column Type (object) Planned Decision: Correct Reason / Justification: Convert column to proper datetime64 format to enable correct chronological sorting and filtering.
